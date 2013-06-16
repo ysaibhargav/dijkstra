@@ -1,0 +1,184 @@
+/*
+------------------------------------------------------------------------------------------------------------
+Dijkstra's Algorithm with Heaps - CS213 PROGRAMMING ASSIGNMENT 2
+------------------------------------------------------------------------------------------------------------
+by Sai Bhargav Yalamanchi - 11D070060 25/11/2012
+
+Input - G(V, E)
+First line - number of nodes in the graph (|V| <= 1024)
+Followed by |V| chunks, where chunk i consists of mi+1 lines,
+of which the first line is the number mi, the out degree of vertex vi (0 <= vi < |V|).
+The next mi lines consist of two numbers vj (one of vi's neighbours) and wij (weight of edge vi-vj >= 0).
+
+Output -
+|V| lines, where ith line is of form -
+i --> d(S, i)
+where d(S, i) is the shortest path distance between the source S and the vertex i that the 
+algorithm computes.
+
+Sample - 
+INPUT
+3
+2
+1 2
+2 3
+0
+0
+
+OUTPUT
+0 --> 0
+1 --> 2
+2 --> 3
+
+Note:
+Below is the implementation of the algorithm.
+I have used binary heaps as the priority queue data structure
+for efficient extract mins and decrease key operations.
+The heap has been implemented by means of arrays.
+I have used the map data structure to link the nodes of the graph
+with their positions in the array, to avoid pointer logic in my code.
+In any heap function call, the map is used for about O(1) times.
+Each map operation takes about O(lg |V|) time, therefore, the asymptotic
+run time of the heap function remains the same. 
+(Each insert, extract min, decrease key operation takes O(lg |V|) time.)
+
+Time complexity - O((|V|+|E|)lg |V|).
+*/
+
+#include <iostream>
+#include <vector>
+#include <map>
+#define N 0x7fffffff;
+#define w(u, v) G[u][v].second;
+
+using namespace std;
+
+typedef vector<vector <pair<int, int> > > graph;
+typedef vector<int> list;
+typedef pair<int, int> p;
+
+class Heap{
+	private:
+		int n;
+		p A[1025];
+		map<int, int> M;
+	public:
+		Heap(){
+			n = 0;
+			for(int i = 0; i < 1025; i++){
+				A[i].second = -1;
+			}
+		}
+		Heap emptyQ(){
+			return Heap();
+		}
+		void decreaseKey(int n_, int k){
+			int x = M[n_];
+			int parent_x = x/2;
+			A[x].second = k;
+			while (parent_x != 0 && k < A[parent_x].second){
+				p T = A[x];
+				A[x] = A[parent_x];
+				M[A[parent_x].first] = x;
+				A[parent_x] = T;
+				M[n_] = parent_x;
+			}	
+		}
+		void increaseKey(int n_, int k){
+                        int x = M[n_], lC = A[2*x].second, rC = A[2*x+1].second;
+                        A[x].second = k;
+                        while (lC != -1 || rC != -1){
+                                p T = A[x];
+				if(lC < rC || rC == -1){
+					A[x] = A[2*x];
+					M[A[2*x].first] = x;
+					A[2*x] = T;
+					M[n_] = 2*x;	
+					x = 2*x;
+					lC = A[2*x].second, rC = A[2*x+1].second;
+				}
+				else{
+					A[x] = A[2*x+1];
+					M[A[2*x+1].first] = x;
+					A[2*x+1] = T;
+					M[n_] = 2*x+1;	
+					x = 2*x+1;
+					lC = A[2*x].second, rC = A[2*x+1].second;
+				}		
+                        }
+                }
+		void insert(int n_, int k){
+			n++;
+			A[n] = make_pair(n_, k);
+			M.insert(make_pair(n_, n));
+			decreaseKey(n_, k);	
+		}
+		p extractMin(){
+			p min = A[1];
+			A[1] = A[n];
+			A[n].second = -1;
+			n--;
+			increaseKey(A[1].first, A[1].second);
+			return min;
+		}
+		bool isEmpty(){
+			if(n == 0)	return true;
+			else	return false;
+		}
+		int size(){
+			return n;
+		}
+};
+
+void disp(list A){
+	for(int i = 0; i < A.size(); i++){
+		cout << i << " --> " << A[i] << endl;
+	}
+}
+
+list Dijkstra(graph G, int S){
+	int inf = N;
+	list dist(G.size(), inf);
+	dist[S] = 0;
+	Heap Q = Heap();
+	Q.insert(0, 0);
+	int n = G.size();
+	for(int i = 1; i < n; i++){
+		Q.insert(i, inf);	
+	}
+	while (!Q.isEmpty()){
+		int u, min = N;
+		p T = Q.extractMin();
+		u = T.first, min = T.second;
+		if(min == inf)	break;
+
+		for(int i = 0; i < G[u].size(); i++){
+			int v = G[u][i].first;
+			int alt = dist[u] + w(u, i);
+			if(alt < dist[v]){
+				dist[v] = alt;
+				Q.decreaseKey(v, alt);
+			}
+		}
+	}
+	return dist;
+}
+
+main(){
+	graph G;
+	int S = 0, n, i = 0;
+	cin  >> n;
+	G.resize(n);
+	while(i < n){
+		int m;
+		cin >> m;
+		while(m-- > 0){
+			int v, w;
+			cin >> v >> w;
+			G[i].push_back(make_pair(v, w));
+		}
+		i++;
+	}
+	list dist = Dijkstra(G, S);
+	disp(dist);
+}
